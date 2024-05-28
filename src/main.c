@@ -336,7 +336,7 @@ void parse_code(program *user_program)
                 check(memcpy(buf, t, t_end - t));
 
                 // Convert text to int
-                v = atoi(buf);
+                v = strtol(buf, NULL, 0);
                 program_set_bytecode(user_program, v);
 
                 p = t_end;
@@ -406,7 +406,7 @@ void parse_code(program *user_program)
                 check((t_end = next_eol(t, end)));
                 check(memcpy(buf, t, t_end - t));
 
-                v = atoi(buf);
+                v = strtol(buf, NULL, 0);
                 program_set_bytecode(user_program, v);
 
                 p = t_end;
