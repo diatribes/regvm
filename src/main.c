@@ -120,8 +120,6 @@ typedef enum {
     OPS_COUNT,
 } ops_enum;
 
-ops_enum ops_list[OPS_COUNT];
-
 const char *ops_enum_strings[] = {
     "PUTI",
     "PUTC",
@@ -158,12 +156,11 @@ const char *ops_enum_strings[] = {
     "OPS_COUNT",
 };
 
-int pc;
-
+int ip;
 int code[PROGRAM_LIMIT];
 int code_length;
 int labels[PROGRAM_LIMIT];
-#define CODE_AT_PC ((int)code[pc])
+#define CODE_AT_PC ((int)code[ip])
 
 typedef struct program {
     char *asmcode;
@@ -178,184 +175,6 @@ program user_program;
 
 int flags[FLAGS_COUNT];
 int registers[REGISTERS_COUNT];
-
-int program_pong_test[] = {
-
-STORE, R0, 10,
-STORE, R1, 1,
-
-STORE, R2, 32,
-STORE, R3, 1,
-
-STORE, R4, 50,
-
-LABEL, 0,
-
-    SYNC,           // CPU->GPU
-    CLS,
-
-    MOVE,  I0, R0,      // X += DX
-    MOVE,  I1, R1,    
-    ADD,
-    MOVE, R0, O0,
-
-    MOVE,  I0, R0,      // X == 128?
-    STORE, I1, 128,
-    CMPI,
-    DECEQ, R1,
-    DECEQ, R1,
-    MOVE,  I0, R0,
-
-    MOVE,  I0, R0,      // X == 1?
-    STORE, I1, 1,
-    CMPI,
-    INCEQ, R1,
-    INCEQ, R1,
-    MOVE,  I0, R0,
-
-    MOVE,  I0, R2,      // Y += DY
-    MOVE,  I1, R3,    
-    ADD,
-    MOVE, R2, O0,
-
-    MOVE,  I0, R2,      // Y == 128?
-    STORE, I1, 127,
-    CMPI,
-    DECEQ, R3,
-    DECEQ, R3,
-
-    MOVE,  I0, R2,      // Y == 128?
-    STORE, I1, 1,
-    CMPI,
-    INCEQ, R3,
-    INCEQ, R3,
-
-    MOVE,  I0, R0,
-    MOVE,  I1, R2,
-    STORE, I2, (int)0xffffff00,
-    PIXEL,
-
-    
-    MOVE, I0, R4,
-    STORE,I1, 120,
-    STORE,I2, (int)0xff000000,
-    PIXEL,
-    INC, I0,
-    PIXEL,
-    INC, I0,
-    PIXEL,
-    INC, I0,
-    PIXEL,
-    INC, I0,
-    PIXEL,
-    INC, I0,
-    PIXEL,
-    INC, I0,
-    PIXEL,
-    INC, I0,
-    PIXEL,
-    INC, I0,
-    PIXEL,
-    INC, I0,
-    PIXEL,
-
-
-    STORE, I0, 0,
-    BUTTON,
-    MOVE, I0, O0,
-    STORE, I1, 1,
-    CMPI,
-    DECEQ, R4,
-
-    STORE, I0, 1,
-    BUTTON,
-    MOVE, I0, O0,
-    STORE, I1, 1,
-    CMPI,
-    INCEQ, R4,
-
-
-    MOVE, I0, R2,
-    STORE, I1, 120,
-    CMPI,
-    JMPLT, 0,
-
-    MOVE, I0, R3,
-    STORE, I1, 1,
-    CMPI,
-    JMPLT, 0,
-    
-    MOVE, I0, R4, // compare ball_x to paddle_x
-    MOVE, I1, R0, // 
-    CMPI,
-    DECEQ, R3,
-    DECEQ, R3,
-    JMPEQ, 0,
-
-    INC, I0,
-    CMPI,
-    DECEQ, R3,
-    DECEQ, R3,
-    JMPEQ, 0,
-
-    INC, I0,
-    CMPI,
-    DECEQ, R3,
-    DECEQ, R3,
-    JMPEQ, 0,
-
-    INC, I0,
-    CMPI,
-    DECEQ, R3,
-    DECEQ, R3,
-    JMPEQ, 0,
-
-    INC, I0,
-    CMPI,
-    DECEQ, R3,
-    DECEQ, R3,
-    JMPEQ, 0,
-
-    INC, I0,
-    CMPI,
-    DECEQ, R3,
-    DECEQ, R3,
-    JMPEQ, 0,
-
-    INC, I0,
-    CMPI,
-    DECEQ, R3,
-    DECEQ, R3,
-    JMPEQ, 0,
-
-    INC, I0,
-    CMPI,
-    DECEQ, R3,
-    DECEQ, R3,
-    JMPEQ, 0,
-
-    INC, I0,
-    CMPI,
-    DECEQ, R3,
-    DECEQ, R3,
-    JMPEQ, 0,
-
-    INC, I0,
-    CMPI,
-    DECEQ, R3,
-    DECEQ, R3,
-    JMPEQ, 0,
-
-    INC, I0,
-    CMPI,
-    DECEQ, R3,
-    DECEQ, R3,
-    JMPEQ, 0,
-
-JMP, 0,
-
-HALT
-};
 
 typedef struct software_texture
 {
@@ -437,23 +256,23 @@ static char *next_eol(char *p, char *end)
     return p <= end ? p : NULL;
 }
 
-int is_opcode(char *p, char *end, ops_enum opcode)
+int is_oipode(char *p, char *end, ops_enum oipode)
 {
-    const char *opcode_string = ops_enum_strings[opcode];
-    size_t n = strlen(opcode_string);
+    const char *oipode_string = ops_enum_strings[oipode];
+    size_t n = strlen(oipode_string);
 
     char *t = next_space(p, end);
     int oplen = t - p;
 
     if (n != oplen) return 0; 
-    if (strncmp(p, opcode_string, oplen) == 0) return 1;
+    if (strncmp(p, oipode_string, oplen) == 0) return 1;
     return 0;
 }
 
-int next_opcode(char *p, char *end)
+int next_oipode(char *p, char *end)
 {
     for (int i = 0; i < OPS_COUNT; i++) {
-        if (is_opcode(p, end, i)) {
+        if (is_oipode(p, end, i)) {
             return i;
         }
     }
@@ -487,7 +306,7 @@ void parse_code(program *user_program)
     char *t_end;
     int v;
     char buf[64];
-    ops_enum opcode;
+    ops_enum oipode;
     registers_enum r;
     user_program->ip = 0;
     user_program->bytecode_len = 0;
@@ -495,16 +314,16 @@ void parse_code(program *user_program)
 
         memset(buf, 0, sizeof(buf));
         check((t = skip_space(p, end)))
-        opcode = next_opcode(t, end);
-        if (opcode == -1) break;
-        switch(opcode) {
+        oipode = next_oipode(t, end);
+        if (oipode == -1) break;
+        switch(oipode) {
             case STORE:
             {
-                // Write a store opcode to the program
-                program_set_bytecode(user_program, opcode);
+                // Write a store oipode to the program
+                program_set_bytecode(user_program, oipode);
 
                 // Get next token, which should be a register
-                t += strlen(ops_enum_strings[opcode]);
+                t += strlen(ops_enum_strings[oipode]);
                 check((t = skip_space(t, end)));
 
                 // Convert text to register enum
@@ -530,11 +349,11 @@ void parse_code(program *user_program)
             break;
             case MOVE:
             {
-                // Write a move opcode to the program
-                program_set_bytecode(user_program, opcode);
+                // Write a move oipode to the program
+                program_set_bytecode(user_program, oipode);
 
                 // Get next token, which should be a register
-                t += strlen(ops_enum_strings[opcode]);
+                t += strlen(ops_enum_strings[oipode]);
                 check((t = skip_space(t, end)));
 
                 // Convert text to register enum
@@ -562,10 +381,10 @@ void parse_code(program *user_program)
             case DEC:
             case DECEQ:
             {
-                program_set_bytecode(user_program, opcode);
+                program_set_bytecode(user_program, oipode);
 
                 // Get next token, which should be a register
-                t += strlen(ops_enum_strings[opcode]);
+                t += strlen(ops_enum_strings[oipode]);
                 check((t = skip_space(t, end)));
                 check((r = get_register(t, end)) != -1);
                 t+=2;
@@ -583,11 +402,11 @@ void parse_code(program *user_program)
             case JMPNE:
             case JMPEQ:
             {
-                // Write opcode to the program
-                program_set_bytecode(user_program, opcode);
+                // Write oipode to the program
+                program_set_bytecode(user_program, oipode);
 
                 // Get next token, which should be a number
-                t += strlen(ops_enum_strings[opcode]);
+                t += strlen(ops_enum_strings[oipode]);
                 check((t = skip_space(t, end)));
                 check((t_end = next_eol(t, end)));
                 check(memcpy(buf, t, t_end - t));
@@ -617,9 +436,9 @@ void parse_code(program *user_program)
             case PUTC:
             case PUTI:
             {
-                // Write opcode to the program
-                program_set_bytecode(user_program, opcode);
-                t += strlen(ops_enum_strings[opcode]);
+                // Write oipode to the program
+                program_set_bytecode(user_program, oipode);
+                t += strlen(ops_enum_strings[oipode]);
                 p = t;
                 break;
             }
@@ -639,30 +458,13 @@ error:
 
 void dumvm_init()
 {
-    for (int i = 0; i < OPS_COUNT; i++) {
-        ops_list[i] = i;
-    }
-
-    //memset(stack, 0, sizeof(stack));
     memset(registers, 0, sizeof(registers));
     memset(code, 0, sizeof(code));
-
-    // pong
-    //code_length = sizeof(program_pong_test) / sizeof(float);
-    //memcpy(&code, &program_pong_test, sizeof(program_pong_test));
 
     code_length = user_program.bytecode_len;
     memcpy(&code, user_program.bytecode, user_program.bytecode_len * sizeof(int));
 
-    FILE *f = fopen("myasm.data", "wb");
-    fwrite(user_program.bytecode, sizeof(int), user_program.bytecode_len, f);
-    fclose(f);
-
-    f = fopen("asm.data", "wb");
-    fwrite(program_pong_test, sizeof(int), sizeof(program_pong_test) / sizeof(int), f);
-    fclose(f);
-
-    pc = 0;
+    ip = 0;
 }
 
 static void tick(long millis)
@@ -732,7 +534,7 @@ void dumvm_program_loop(){
 
     register int i0 = 0;
     register int i1 = 0;
-    register int op = code[pc];
+    register int op = code[ip];
 
     registers[T0] = SDL_GetTicks();
     switch(op){
@@ -744,37 +546,37 @@ void dumvm_program_loop(){
         case STORE:
 
             // data from code
-            pc++;
-            i0 = code[pc];
+            ip++;
+            i0 = code[ip];
 
             // data from code
-            pc++;
-            i1 = code[pc];
+            ip++;
+            i1 = code[ip];
 
             registers[i0] = i1;
             break;
 
         case MOVE:
             // data from code
-            pc++;
-            i0 = code[pc];
+            ip++;
+            i0 = code[ip];
 
             // data from code
-            pc++;
-            i1 = code[pc];
+            ip++;
+            i1 = code[ip];
 
             registers[i0] = registers[i1];
 
             break;
 
         case PUTI:
-            pc++;
+            ip++;
             printf("%d", (int)registers[I0]);
             fflush(stdout);
             break;
 
         case PUTC:
-            pc++;
+            ip++;
             printf("%c", (char)registers[I0]);
             fflush(stdout);
             break;
@@ -792,24 +594,24 @@ void dumvm_program_loop(){
             break;
 
         case INC:
-            pc++;
+            ip++;
             registers[CODE_AT_PC]++;
             break;
 
         case DEC:
-            pc++;
+            ip++;
             registers[CODE_AT_PC]--;
             break;
 
         case INCEQ:
-            pc++;
+            ip++;
             if (flags[EQ]) {
                 registers[CODE_AT_PC]++;
             }
             break;
 
         case DECEQ:
-            pc++;
+            ip++;
             if (flags[EQ]) {
                 registers[CODE_AT_PC]--;
             }
@@ -848,17 +650,17 @@ void dumvm_program_loop(){
             break;
 
         case HALT:
-            pc = code_length;
+            ip = code_length;
             break;
 
         case RESTART:
-            pc = -1;
+            ip = -1;
             break;
 
         case LABEL:
-            pc++;
-            i0 = code[pc];
-            labels[i0] = pc;
+            ip++;
+            i0 = code[ip];
+            labels[i0] = ip;
             break;
 
         case CMPI:
@@ -871,47 +673,47 @@ void dumvm_program_loop(){
             break;
 
         case JMPEQ:
-            pc++;
-            i0 = code[pc];
+            ip++;
+            i0 = code[ip];
             if (flags[EQ]) {
-                pc = labels[i0];
+                ip = labels[i0];
             }
             break;
 
         case JMPNE:
-            pc++;
-            i0 = code[pc];
+            ip++;
+            i0 = code[ip];
             if (!flags[EQ]) {
-                pc = labels[i0];
+                ip = labels[i0];
             }
             break;
 
         case JMPGT:
-            pc++;
-            i0 = code[pc];
+            ip++;
+            i0 = code[ip];
             if (flags[GT]) {
-                pc = labels[i0];
+                ip = labels[i0];
             }
             break;
 
         case JMPLT:
-            pc++;
-            i0 = code[pc];
+            ip++;
+            i0 = code[ip];
             if (flags[LT]) {
-                pc = labels[i0];
+                ip = labels[i0];
             }
             break;
 
         case JMP:
-            pc++;
-            i0 = code[pc];
-            pc = labels[i0];
+            ip++;
+            i0 = code[ip];
+            ip = labels[i0];
             break;
         case CLS:
             memset(cpu_texture.pixels, 0x111111, W * H * sizeof(Uint32));
             break;
     }
-    pc++;
+    ip++;
 }
     
 static int init_audio()
@@ -988,7 +790,7 @@ int main(int argc, char *argv[])
     #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(dumvm_program_loop, 0, 1);
     #else
-    while(pc < code_length && !done()) { dumvm_program_loop(); }
+    while(ip < code_length && !done()) { dumvm_program_loop(); }
     #endif
 
     // Cleanup
