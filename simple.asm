@@ -1,0 +1,3 @@
+STORE I0, 32
+PUTI
+HALT
