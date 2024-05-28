@@ -100,8 +100,6 @@ typedef enum {
     SYNC,
     STORE,
     MOVE,
-    COS,
-    SIN,
     HALT,
     SLEEP,
     LABEL,
@@ -136,8 +134,6 @@ const char *ops_enum_strings[] = {
     "SYNC",
     "STORE",
     "MOVE",
-    "COS",
-    "SIN",
     "HALT",
     "SLEEP",
     "LABEL",
@@ -431,8 +427,6 @@ void parse_code(program *user_program)
             case XOR:
             case PIXEL:
             case SYNC:
-            case COS:
-            case SIN:
             case HALT:
             case SLEEP:
             case BUTTON:
@@ -626,14 +620,6 @@ void dumvm_program_loop(){
 
         case BUTTON:
             registers[O0] = button_pressed((int)registers[I0]);
-            break;
-
-        case COS:
-            registers[O0] = cosf(registers[I0]);
-            break;
-
-        case SIN:
-            registers[O0] = sinf(registers[I0]);
             break;
 
         case SLEEP:
