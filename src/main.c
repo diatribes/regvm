@@ -256,23 +256,23 @@ static char *next_eol(char *p, char *end)
     return p <= end ? p : NULL;
 }
 
-int is_oipode(char *p, char *end, ops_enum oipode)
+int is_opcode(char *p, char *end, ops_enum opcode)
 {
-    const char *oipode_string = ops_enum_strings[oipode];
-    size_t n = strlen(oipode_string);
+    const char *opcode_string = ops_enum_strings[opcode];
+    size_t n = strlen(opcode_string);
 
     char *t = next_space(p, end);
     int oplen = t - p;
 
     if (n != oplen) return 0; 
-    if (strncmp(p, oipode_string, oplen) == 0) return 1;
+    if (strncmp(p, opcode_string, oplen) == 0) return 1;
     return 0;
 }
 
-int next_oipode(char *p, char *end)
+int next_opcode(char *p, char *end)
 {
     for (int i = 0; i < OPS_COUNT; i++) {
-        if (is_oipode(p, end, i)) {
+        if (is_opcode(p, end, i)) {
             return i;
         }
     }
@@ -306,7 +306,7 @@ void parse_code(program *user_program)
     char *t_end;
     int v;
     char buf[64];
-    ops_enum oipode;
+    ops_enum opcode;
     registers_enum r;
     user_program->ip = 0;
     user_program->bytecode_len = 0;
@@ -314,16 +314,16 @@ void parse_code(program *user_program)
 
         memset(buf, 0, sizeof(buf));
         check((t = skip_space(p, end)))
-        oipode = next_oipode(t, end);
-        if (oipode == -1) break;
-        switch(oipode) {
+        opcode = next_opcode(t, end);
+        if (opcode == -1) break;
+        switch(opcode) {
             case STORE:
             {
-                // Write a store oipode to the program
-                program_set_bytecode(user_program, oipode);
+                // Write a store opcode to the program
+                program_set_bytecode(user_program, opcode);
 
                 // Get next token, which should be a register
-                t += strlen(ops_enum_strings[oipode]);
+                t += strlen(ops_enum_strings[opcode]);
                 check((t = skip_space(t, end)));
 
                 // Convert text to register enum
@@ -349,11 +349,11 @@ void parse_code(program *user_program)
             break;
             case MOVE:
             {
-                // Write a move oipode to the program
-                program_set_bytecode(user_program, oipode);
+                // Write a move opcode to the program
+                program_set_bytecode(user_program, opcode);
 
                 // Get next token, which should be a register
-                t += strlen(ops_enum_strings[oipode]);
+                t += strlen(ops_enum_strings[opcode]);
                 check((t = skip_space(t, end)));
 
                 // Convert text to register enum
@@ -381,10 +381,10 @@ void parse_code(program *user_program)
             case DEC:
             case DECEQ:
             {
-                program_set_bytecode(user_program, oipode);
+                program_set_bytecode(user_program, opcode);
 
                 // Get next token, which should be a register
-                t += strlen(ops_enum_strings[oipode]);
+                t += strlen(ops_enum_strings[opcode]);
                 check((t = skip_space(t, end)));
                 check((r = get_register(t, end)) != -1);
                 t+=2;
@@ -402,11 +402,11 @@ void parse_code(program *user_program)
             case JMPNE:
             case JMPEQ:
             {
-                // Write oipode to the program
-                program_set_bytecode(user_program, oipode);
+                // Write opcode to the program
+                program_set_bytecode(user_program, opcode);
 
                 // Get next token, which should be a number
-                t += strlen(ops_enum_strings[oipode]);
+                t += strlen(ops_enum_strings[opcode]);
                 check((t = skip_space(t, end)));
                 check((t_end = next_eol(t, end)));
                 check(memcpy(buf, t, t_end - t));
@@ -436,9 +436,9 @@ void parse_code(program *user_program)
             case PUTC:
             case PUTI:
             {
-                // Write oipode to the program
-                program_set_bytecode(user_program, oipode);
-                t += strlen(ops_enum_strings[oipode]);
+                // Write opcode to the program
+                program_set_bytecode(user_program, opcode);
+                t += strlen(ops_enum_strings[opcode]);
                 p = t;
                 break;
             }
