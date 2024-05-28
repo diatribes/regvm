@@ -159,7 +159,6 @@ const char *ops_enum_strings[] = {
 int ip;
 int code[PROGRAM_LIMIT];
 int code_length;
-int labels[PROGRAM_LIMIT];
 #define CODE_AT_PC ((int)code[ip])
 
 typedef struct program {
@@ -416,6 +415,10 @@ void parse_code(program *user_program)
 
                 p = t_end;
 
+                if (opcode == LABEL) {
+                    user_program->labels[v] = user_program->bytecode_len - 1;
+                }
+
             }
             break;
             case CLS:
@@ -659,8 +662,6 @@ void dumvm_program_loop(){
 
         case LABEL:
             ip++;
-            i0 = code[ip];
-            labels[i0] = ip;
             break;
 
         case CMPI:
@@ -676,7 +677,7 @@ void dumvm_program_loop(){
             ip++;
             i0 = code[ip];
             if (flags[EQ]) {
-                ip = labels[i0];
+                ip = user_program.labels[i0];
             }
             break;
 
@@ -684,7 +685,7 @@ void dumvm_program_loop(){
             ip++;
             i0 = code[ip];
             if (!flags[EQ]) {
-                ip = labels[i0];
+                ip = user_program.labels[i0];
             }
             break;
 
@@ -692,7 +693,7 @@ void dumvm_program_loop(){
             ip++;
             i0 = code[ip];
             if (flags[GT]) {
-                ip = labels[i0];
+                ip = user_program.labels[i0];
             }
             break;
 
@@ -700,17 +701,17 @@ void dumvm_program_loop(){
             ip++;
             i0 = code[ip];
             if (flags[LT]) {
-                ip = labels[i0];
+                ip = user_program.labels[i0];
             }
             break;
 
         case JMP:
             ip++;
             i0 = code[ip];
-            ip = labels[i0];
+            ip = user_program.labels[i0];
             break;
         case CLS:
-            memset(cpu_texture.pixels, 0x111111, W * H * sizeof(Uint32));
+            memset(cpu_texture.pixels, 0x333333, W * H * sizeof(Uint32));
             break;
     }
     ip++;
