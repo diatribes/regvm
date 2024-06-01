@@ -1,7 +1,7 @@
 TARGET = regvm
 #TARGET = regvm.html
 LIBS = -lm `pkg-config --cflags --libs sdl2`
-CFLAGS= -o regvm -o 'regvm.html' -g -Wall -std=c99 -pedantic -I ./include `pkg-config --cflags --libs sdl2` -D DEBUG
+CFLAGS= -o regvm -O3 -Wall -std=c99 -pedantic -I ./include `pkg-config --cflags --libs sdl2`
 #CFLAGS= -flto -O3 -o regvm.html -sUSE_SDL=2 -I ./include
 LDFLAGS =
 CC= gcc

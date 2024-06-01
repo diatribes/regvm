@@ -509,7 +509,7 @@ static void sync()
     tick(current_millis);
     while (current_millis < last_millis + 16) {
         current_millis = SDL_GetTicks();
-        SDL_Delay(2);
+        SDL_Delay(1);
     }
     last_millis = current_millis;
 

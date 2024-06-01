@@ -11,7 +11,7 @@ LABEL 0
         INC R0
 
         MOVE  I0, R0
-        STORE I1, 128
+        STORE I1, 127
         CMP
         JMPEQ 0
 
@@ -36,7 +36,7 @@ LABEL 0
             PIXEL
 
             MOVE  I0, R1
-            STORE I1, 128
+            STORE I1, 127
             CMP
             JMPEQ 1
 
