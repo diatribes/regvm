@@ -16,14 +16,14 @@ LABEL 0
     MOVE R0, O0
     MOVE  I0, R0
     STORE I1, 128
-    CMPI
+    CMP
     DECEQ R1
     DECEQ R1
 
     MOVE  I0, R0
     MOVE  I0, R0
     STORE I1, 1
-    CMPI
+    CMP
     INCEQ R1
     INCEQ R1
 
@@ -35,13 +35,13 @@ LABEL 0
     MOVE R2, O0
     MOVE  I0, R2
     STORE I1, 127
-    CMPI
+    CMP
     DECEQ R3
     DECEQ R3
 
     MOVE I0, R2
     STORE I1, 1
-    CMPI
+    CMP
     INCEQ R3
     INCEQ R3
 
@@ -87,89 +87,89 @@ LABEL 0
     BUTTON
     MOVE I0, O0
     STORE I1, 1
-    CMPI
+    CMP
     DECEQ R4
 
     STORE I0, 1
     BUTTON
     MOVE I0, O0
     STORE I1, 1
-    CMPI
+    CMP
     INCEQ R4
 
     MOVE I0, R2
     STORE I1, 120
-    CMPI
+    CMP
     JMPLT 0
 
     MOVE I0, R3
     STORE I1, 1
-    CMPI
+    CMP
     JMPLT 0
 
     MOVE I0, R4
     MOVE I1, R0
-    CMPI
+    CMP
     DECEQ R3
     DECEQ R3
     JMPEQ 0
 
     INC I0
-    CMPI
+    CMP
     DECEQ R3
     DECEQ R3
     JMPEQ 0
 
     INC I0
-    CMPI
+    CMP
     DECEQ R3
     DECEQ R3
     JMPEQ 0
 
     INC I0
-    CMPI
+    CMP
     DECEQ R3
     DECEQ R3
     JMPEQ 0
 
     INC I0
-    CMPI
+    CMP
     DECEQ R3
     DECEQ R3
     JMPEQ 0
 
     INC I0
-    CMPI
+    CMP
     DECEQ R3
     DECEQ R3
     JMPEQ 0
 
     INC I0
-    CMPI
+    CMP
     DECEQ R3
     DECEQ R3
     JMPEQ 0
 
     INC I0
-    CMPI
+    CMP
     DECEQ R3
     DECEQ R3
     JMPEQ 0
 
     INC I0
-    CMPI
+    CMP
     DECEQ R3
     DECEQ R3
     JMPEQ 0
 
     INC I0
-    CMPI
+    CMP
     DECEQ R3
     DECEQ R3
     JMPEQ 0
 
     INC I0
-    CMPI
+    CMP
     DECEQ R3
     DECEQ R3
     JMPEQ 0

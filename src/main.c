@@ -3,7 +3,6 @@
 #endif
 
 #include <SDL.h>
-#include <SDL_mixer.h>
 #include <math.h>
 #include <errno.h>
 
@@ -108,8 +107,7 @@ typedef enum {
     JMPNE,
     JMPGT,
     JMPLT,
-    CMPI,
-    CMPF,
+    CMP,
     XOR,
     BUTTON,
     RESTART,
@@ -142,8 +140,7 @@ const char *ops_enum_strings[] = {
     "JMPNE",
     "JMPGT",
     "JMPLT",
-    "CMPI",
-    "CMPF",
+    "CMP",
     "XOR",
     "BUTTON",
     "RESTART",
@@ -153,6 +150,8 @@ const char *ops_enum_strings[] = {
 };
 
 int ip;
+int i0;
+int i1;
 int code[PROGRAM_LIMIT];
 int code_length;
 #define CODE_AT_PC ((int)code[ip])
@@ -419,8 +418,7 @@ void parse_code(program *user_program)
             break;
             case CLS:
             case RESTART:
-            case CMPI:
-            case CMPF:
+            case CMP:
             case ADD:
             case SUB:
             case MUL:
@@ -462,6 +460,8 @@ void dumvm_init()
     memcpy(&code, user_program.bytecode, user_program.bytecode_len * sizeof(int));
 
     ip = 0;
+    i0 = 0;
+    i1 = 0;
 }
 
 static void tick(long millis)
@@ -529,8 +529,6 @@ static void sync()
 
 void dumvm_program_loop(){
 
-    register int i0 = 0;
-    register int i1 = 0;
     register int op = code[ip];
 
     registers[T0] = SDL_GetTicks();
@@ -650,7 +648,7 @@ void dumvm_program_loop(){
             ip++;
             break;
 
-        case CMPI:
+        case CMP:
             i0 = registers[I0];
             i1 = registers[I1];
             flags[EQ] = i0 == i1;
@@ -703,25 +701,6 @@ void dumvm_program_loop(){
     ip++;
 }
     
-static int init_audio()
-{
-    if(Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 512) == -1)
-    {
-        printf("SDL2_mixer could not be initialized!\n"
-               "SDL_Error: %s\n", SDL_GetError());
-        fflush(stdout);
-        return 0;
-    }
-    /*
-    some_sound = Mix_LoadWAV(SOUND_TURRET);
-    */
-
-    int volume = Mix_Volume(-1, -1);
-    Mix_Volume(1, volume / 2);
-
-    return 0;
-}
-
 int main(int argc, char *argv[])
 {
 
@@ -731,9 +710,6 @@ int main(int argc, char *argv[])
     // sdl init
     SDL_Init(SDL_INIT_EVERYTHING);
 
-    // audio init
-    init_audio();
-   
     // no filtering
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
 
@@ -770,19 +746,18 @@ int main(int argc, char *argv[])
     cpu_texture.pixels = (Uint32 *) surface->pixels;
     SDL_SetSurfaceBlendMode(cpu_texture.surface, SDL_BLENDMODE_NONE);
 
-    read_code(code_path_arg, &user_program);
-    parse_code(&user_program);
+    if(read_code(code_path_arg, &user_program) > 0) {
+        parse_code(&user_program);
 
-    dumvm_init();
-    #ifdef __EMSCRIPTEN__
-    emscripten_set_main_loop(dumvm_program_loop, 0, 1);
-    #else
-    while(ip < code_length && !done()) { dumvm_program_loop(); }
-    #endif
+        dumvm_init();
+        #ifdef __EMSCRIPTEN__
+        emscripten_set_main_loop(dumvm_program_loop, 0, 1);
+        #else
+        while(ip < code_length && !done()) { dumvm_program_loop(); }
+        #endif
+    }
 
     // Cleanup
-    SDL_DestroyTexture(gpu_texture);
-    SDL_FreeSurface(surface);
     return 0;
 }
 
