@@ -1,7 +1,3 @@
-#ifdef __EMSCRIPTEN__
-#include <emscripten.h>
-#endif
-
 #include <SDL.h>
 #include <math.h>
 #include <errno.h>
@@ -149,19 +145,18 @@ const char *ops_enum_strings[] = {
     "OPS_COUNT",
 };
 
-int ip;
+int pc;
 int i0;
 int i1;
 int code[PROGRAM_LIMIT];
 int code_length;
-#define CODE_AT_PC ((int)code[ip])
+#define CODE_AT_PC ((int)code[pc])
 
 typedef struct program {
     char *asmcode;
     size_t asmcode_len;
     int *bytecode;
     size_t bytecode_len;
-    int ip;
     int labels[10];
 } program;
 
@@ -302,7 +297,6 @@ void parse_code(program *user_program)
     char buf[64];
     ops_enum opcode;
     registers_enum r;
-    user_program->ip = 0;
     user_program->bytecode_len = 0;
     for (;;) {
 
@@ -451,7 +445,7 @@ error:
 
 }
 
-void dumvm_init()
+void regvm_init()
 {
     memset(registers, 0, sizeof(registers));
     memset(code, 0, sizeof(code));
@@ -459,7 +453,7 @@ void dumvm_init()
     code_length = user_program.bytecode_len;
     memcpy(&code, user_program.bytecode, user_program.bytecode_len * sizeof(int));
 
-    ip = 0;
+    pc = 0;
     i0 = 0;
     i1 = 0;
 }
@@ -527,178 +521,179 @@ static void sync()
 
 }
 
-void dumvm_program_loop(){
+void regvm_program_loop(){
 
-    register int op = code[ip];
+    register int op;
+    for(pc = 0; pc < code_length && !done(); pc++) {
+        op = code[pc];
+        registers[T0] = SDL_GetTicks();
+        switch(op){
 
-    registers[T0] = SDL_GetTicks();
-    switch(op){
+            case SYNC:
+                sync();
+                continue;
 
-        case SYNC:
-            sync();
-            break;
+            case STORE:
 
-        case STORE:
+                // data from code
+                pc++;
+                i0 = code[pc];
 
-            // data from code
-            ip++;
-            i0 = code[ip];
+                // data from code
+                pc++;
+                i1 = code[pc];
 
-            // data from code
-            ip++;
-            i1 = code[ip];
+                registers[i0] = i1;
+                continue;
 
-            registers[i0] = i1;
-            break;
+            case MOVE:
+                // data from code
+                pc++;
+                i0 = code[pc];
 
-        case MOVE:
-            // data from code
-            ip++;
-            i0 = code[ip];
+                // data from code
+                pc++;
+                i1 = code[pc];
 
-            // data from code
-            ip++;
-            i1 = code[ip];
+                registers[i0] = registers[i1];
 
-            registers[i0] = registers[i1];
+                continue;
 
-            break;
+            case PUTI:
+                pc++;
+                printf("%d", (int)registers[I0]);
+                fflush(stdout);
+                continue;
 
-        case PUTI:
-            ip++;
-            printf("%d", (int)registers[I0]);
-            fflush(stdout);
-            break;
+            case PUTC:
+                pc++;
+                printf("%c", (char)registers[I0]);
+                fflush(stdout);
+                continue;
 
-        case PUTC:
-            ip++;
-            printf("%c", (char)registers[I0]);
-            fflush(stdout);
-            break;
+            case ADD:
+                registers[O0] = registers[I0] + registers[I1];
+                continue;
 
-        case ADD:
-            registers[O0] = registers[I0] + registers[I1];
-            break;
+            case SUB:
+                registers[O0] = registers[I0] - registers[I1];
+                continue;
 
-        case SUB:
-            registers[O0] = registers[I0] - registers[I1];
-            break;
+            case MUL:
+                registers[O0] = registers[I0] * registers[I1];
+                continue;
 
-        case MUL:
-            registers[O0] = registers[I0] * registers[I1];
-            break;
-
-        case INC:
-            ip++;
-            registers[CODE_AT_PC]++;
-            break;
-
-        case DEC:
-            ip++;
-            registers[CODE_AT_PC]--;
-            break;
-
-        case INCEQ:
-            ip++;
-            if (flags[EQ]) {
+            case INC:
+                pc++;
                 registers[CODE_AT_PC]++;
-            }
-            break;
+                continue;
 
-        case DECEQ:
-            ip++;
-            if (flags[EQ]) {
+            case DEC:
+                pc++;
                 registers[CODE_AT_PC]--;
-            }
-            break;
+                continue;
 
-        case XOR:
-            registers[O0] = (int)registers[I0] ^ (int)registers[I1];
-            break;
+            case INCEQ:
+                pc++;
+                if (flags[EQ]) {
+                    registers[CODE_AT_PC]++;
+                }
+                continue;
 
-        case BUTTON:
-            registers[O0] = button_pressed((int)registers[I0]);
-            break;
+            case DECEQ:
+                pc++;
+                if (flags[EQ]) {
+                    registers[CODE_AT_PC]--;
+                }
+                continue;
 
-        case SLEEP:
-            SDL_Delay(registers[I0]);
-            break;
+            case XOR:
+                registers[O0] = (int)registers[I0] ^ (int)registers[I1];
+                continue;
 
-        case PIXEL:
-            {
-                int x = registers[I0];
-                int y = registers[I1];
-                int c = registers[I2];
-                if (x < 0 || y < 0) break;
-                if (x >= cpu_texture.w || y >= cpu_texture.h) break;;
+            case BUTTON:
+                registers[O0] = button_pressed((int)registers[I0]);
+                continue;
 
-                cpu_texture.pixels[y * W + x] = c;
-            }
-            break;
+            case SLEEP:
+                SDL_Delay(registers[I0]);
+                continue;
 
-        case HALT:
-            ip = code_length;
-            break;
+            case PIXEL:
+                {
+                    int x = registers[I0];
+                    int y = registers[I1];
+                    int c = registers[I2];
+                    if (x < 0 || y < 0) continue;
+                    if (x >= cpu_texture.w || y >= cpu_texture.h) continue;;
 
-        case RESTART:
-            ip = -1;
-            break;
+                    cpu_texture.pixels[y * W + x] = c;
+                }
+                continue;
 
-        case LABEL:
-            ip++;
-            break;
+            case HALT:
+                pc = code_length;
+                continue;
 
-        case CMP:
-            i0 = registers[I0];
-            i1 = registers[I1];
-            flags[EQ] = i0 == i1;
-            flags[LT] = i0 < i1;
-            flags[GT] = i0 > i1;
-            flags[ER] = 0;
-            break;
+            case RESTART:
+                pc = -1;
+                continue;
 
-        case JMPEQ:
-            ip++;
-            i0 = code[ip];
-            if (flags[EQ]) {
-                ip = user_program.labels[i0];
-            }
-            break;
+            case LABEL:
+                pc++;
+                continue;
 
-        case JMPNE:
-            ip++;
-            i0 = code[ip];
-            if (!flags[EQ]) {
-                ip = user_program.labels[i0];
-            }
-            break;
+            case CMP:
+                i0 = registers[I0];
+                i1 = registers[I1];
+                flags[EQ] = i0 == i1;
+                flags[LT] = i0 < i1;
+                flags[GT] = i0 > i1;
+                flags[ER] = 0;
+                continue;
 
-        case JMPGT:
-            ip++;
-            i0 = code[ip];
-            if (flags[GT]) {
-                ip = user_program.labels[i0];
-            }
-            break;
+            case JMPEQ:
+                pc++;
+                i0 = code[pc];
+                if (flags[EQ]) {
+                    pc = user_program.labels[i0];
+                }
+                continue;
 
-        case JMPLT:
-            ip++;
-            i0 = code[ip];
-            if (flags[LT]) {
-                ip = user_program.labels[i0];
-            }
-            break;
+            case JMPNE:
+                pc++;
+                i0 = code[pc];
+                if (!flags[EQ]) {
+                    pc = user_program.labels[i0];
+                }
+                continue;
 
-        case JMP:
-            ip++;
-            i0 = code[ip];
-            ip = user_program.labels[i0];
-            break;
-        case CLS:
-            memset(cpu_texture.pixels, 0x333333, W * H * sizeof(Uint32));
-            break;
+            case JMPGT:
+                pc++;
+                i0 = code[pc];
+                if (flags[GT]) {
+                    pc = user_program.labels[i0];
+                }
+                continue;
+
+            case JMPLT:
+                pc++;
+                i0 = code[pc];
+                if (flags[LT]) {
+                    pc = user_program.labels[i0];
+                }
+                continue;
+
+            case JMP:
+                pc++;
+                i0 = code[pc];
+                pc = user_program.labels[i0];
+                continue;
+            case CLS:
+                memset(cpu_texture.pixels, 0x333333, W * H * sizeof(Uint32));
+                continue;
+        }
     }
-    ip++;
 }
     
 int main(int argc, char *argv[])
@@ -749,12 +744,8 @@ int main(int argc, char *argv[])
     if(read_code(code_path_arg, &user_program) > 0) {
         parse_code(&user_program);
 
-        dumvm_init();
-        #ifdef __EMSCRIPTEN__
-        emscripten_set_main_loop(dumvm_program_loop, 0, 1);
-        #else
-        while(ip < code_length && !done()) { dumvm_program_loop(); }
-        #endif
+        regvm_init();
+        regvm_program_loop();
     }
 
     // Cleanup
