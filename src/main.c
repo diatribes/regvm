@@ -145,9 +145,6 @@ const char *ops_enum_strings[] = {
     "OPS_COUNT",
 };
 
-int pc;
-int i0;
-int i1;
 int code[PROGRAM_LIMIT];
 int code_length;
 #define CODE_AT_PC ((int)code[pc])
@@ -452,10 +449,6 @@ void regvm_init()
 
     code_length = user_program.bytecode_len;
     memcpy(&code, user_program.bytecode, user_program.bytecode_len * sizeof(int));
-
-    pc = 0;
-    i0 = 0;
-    i1 = 0;
 }
 
 static void tick(long millis)
@@ -523,8 +516,10 @@ static void sync()
 
 void regvm_program_loop(){
 
-    register int op;
-    for(pc = 0; pc < code_length && !done(); pc++) {
+    register int op = 0;
+    register int i0 = 0;
+    register int i1 = 0;
+    for(register int pc = 0; pc < code_length && !done(); pc++) {
         op = code[pc];
         registers[T0] = SDL_GetTicks();
         switch(op){
