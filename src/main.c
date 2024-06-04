@@ -10,7 +10,6 @@
     if (!(x)) {\
         if (errno) {\
             flockfile(stderr);\
-            fprintf(stderr, "%s:%d " , __FILE__, __LINE__);\
             perror(NULL);\
             funlockfile(stderr);\
         }\
@@ -20,6 +19,33 @@
 #else
     #define check(x) if (!(x)) { errno = 0; goto error; }
 #endif
+
+typedef void (*fn_op)(int*);
+static void op_puti(int *ip);
+static void op_putc(int *ip);
+static void op_inc(int *ip);
+static void op_dec(int *ip);
+static void op_inceq(int *ip);
+static void op_deceq(int *ip);
+static void op_add(int *ip);
+static void op_sub(int *ip);
+static void op_mul(int *ip);
+static void op_pixel(int *ip);
+static void op_sync(int *ip);
+static void op_store(int *ip);
+static void op_move(int *ip);
+static void op_halt(int *ip);
+static void op_sleep(int *ip);
+static void op_label(int *ip);
+static void op_jmp(int *ip);
+static void op_jmpeq(int *ip);
+static void op_jmpne(int *ip);
+static void op_jmpgt(int *ip);
+static void op_jmplt(int *ip);
+static void op_cmp(int *ip);
+static void op_xor(int *ip);
+static void op_button(int *ip);
+static void op_cls(int *ip);
 
 typedef enum {
     PROGRAM_LIMIT = 500,
@@ -106,7 +132,6 @@ typedef enum {
     CMP,
     XOR,
     BUTTON,
-    RESTART,
     CLS,
 
     OPS_COUNT,
@@ -139,10 +164,40 @@ const char *ops_enum_strings[] = {
     "CMP",
     "XOR",
     "BUTTON",
-    "RESTART",
     "CLS",
 
     "OPS_COUNT",
+};
+
+fn_op ops_table[] = {
+    op_puti,
+    op_putc,
+
+    op_inc,
+    op_dec,
+    
+    op_inceq,
+    op_deceq,
+   
+    op_add,
+    op_sub,
+    op_mul,
+    op_pixel,
+    op_sync,
+    op_store,
+    op_move,
+    op_halt,
+    op_sleep,
+    op_label,
+    op_jmp,
+    op_jmpeq,
+    op_jmpne,
+    op_jmpgt,
+    op_jmplt,
+    op_cmp,
+    op_xor,
+    op_button,
+    op_cls,
 };
 
 int code[PROGRAM_LIMIT];
@@ -160,7 +215,7 @@ typedef struct program {
 program user_program;
 
 int flags[FLAGS_COUNT];
-int registers[REGISTERS_COUNT];
+registers_enum registers[REGISTERS_COUNT];
 
 typedef struct software_texture
 {
@@ -408,7 +463,6 @@ void parse_code(program *user_program)
             }
             break;
             case CLS:
-            case RESTART:
             case CMP:
             case ADD:
             case SUB:
@@ -512,185 +566,207 @@ static void sync()
     // Present
     SDL_RenderPresent(renderer);
 
+    if (done()) {
+        exit(0);
+    }
+
 }
 
-void regvm_program_loop(){
+static void op_puti(int *ip)
+{
+    printf("%d", (int)registers[I0]);
+    fflush(stdout);
+    ops_table[ip[1]](&ip[1]);
+}
 
-    register int op = 0;
-    register int i0 = 0;
-    register int i1 = 0;
-    for(register int pc = 0; pc < code_length && !done(); pc++) {
-        op = code[pc];
-        registers[T0] = SDL_GetTicks();
-        switch(op){
 
-            case SYNC:
-                sync();
-                continue;
+static void op_putc(int *ip)
+{
+    printf("%c", (char)registers[I0]);
+    fflush(stdout);
+    ops_table[ip[1]](&ip[1]);
+}
 
-            case STORE:
+static void op_inc(int *ip)
+{
+    registers[ip[1]]++;
+    ops_table[ip[2]](&ip[2]);
+}
 
-                // data from code
-                pc++;
-                i0 = code[pc];
+static void op_dec(int *ip)
+{
+    registers[ip[1]]--;
+    ops_table[ip[2]](&ip[2]);
+}
 
-                // data from code
-                pc++;
-                i1 = code[pc];
 
-                registers[i0] = i1;
-                continue;
+static void op_inceq(int *ip)
+{
+    if (flags[EQ]) {
+        registers[ip[1]]++;
+    }
+    ops_table[ip[2]](&ip[2]);
+}
 
-            case MOVE:
-                // data from code
-                pc++;
-                i0 = code[pc];
+static void op_deceq(int *ip)
+{
+    if (flags[EQ]) {
+        registers[ip[1]]--;
+    }
+    ops_table[ip[2]](&ip[2]);
+}
 
-                // data from code
-                pc++;
-                i1 = code[pc];
 
-                registers[i0] = registers[i1];
+static void op_add(int *ip)
+{
+    registers[O0] = registers[I0] + registers[I1];
+    ops_table[ip[1]](&ip[1]);
+}
 
-                continue;
+static void op_sub(int *ip)
+{
+    registers[O0] = registers[I0] - registers[I1];
+    ops_table[ip[1]](&ip[1]);
+}
 
-            case PUTI:
-                pc++;
-                printf("%d", (int)registers[I0]);
-                fflush(stdout);
-                continue;
+static void op_mul(int *ip)
+{
+    registers[O0] = registers[I0] * registers[I1];
+    ops_table[ip[1]](&ip[1]);
+}
 
-            case PUTC:
-                pc++;
-                printf("%c", (char)registers[I0]);
-                fflush(stdout);
-                continue;
+static void op_pixel(int *ip)
+{
+    int x = registers[I0];
+    int y = registers[I1];
+    int c = registers[I2];
+    if (x >= 0 && y >= 0  && x < cpu_texture.w && y < cpu_texture.h) {
+        cpu_texture.pixels[y * W + x] = c;
+    }
 
-            case ADD:
-                registers[O0] = registers[I0] + registers[I1];
-                continue;
+    ops_table[ip[1]](&ip[1]);
+}
 
-            case SUB:
-                registers[O0] = registers[I0] - registers[I1];
-                continue;
+static void op_sync(int *ip)
+{
+    registers[T0] = SDL_GetTicks();
+    sync();
+    ops_table[ip[1]](&ip[1]);
+}
 
-            case MUL:
-                registers[O0] = registers[I0] * registers[I1];
-                continue;
+static void op_store(int *ip)
+{
+    int i0 = ip[1];
+    int i1 = ip[2]; 
+    registers[i0] = i1;
+    ops_table[ip[3]](&ip[3]);
+}
 
-            case INC:
-                pc++;
-                registers[CODE_AT_PC]++;
-                continue;
+static void op_move(int *ip)
+{
+    int i0 = ip[1];
+    int i1 = ip[2];
+    registers[i0] = registers[i1];
+    ops_table[ip[3]](&ip[3]);
+}
 
-            case DEC:
-                pc++;
-                registers[CODE_AT_PC]--;
-                continue;
+static void op_halt(int *ip)
+{
+    return;
+}
 
-            case INCEQ:
-                pc++;
-                if (flags[EQ]) {
-                    registers[CODE_AT_PC]++;
-                }
-                continue;
+static void op_sleep(int *ip)
+{
+    SDL_Delay(ip[1]);
+    ops_table[ip[2]](&ip[2]);
+}
 
-            case DECEQ:
-                pc++;
-                if (flags[EQ]) {
-                    registers[CODE_AT_PC]--;
-                }
-                continue;
+static void op_label(int *ip)
+{
+    ops_table[ip[2]](&ip[2]);
+}
 
-            case XOR:
-                registers[O0] = (int)registers[I0] ^ (int)registers[I1];
-                continue;
+static void op_jmp(int *ip)
+{
+    int i0 = ip[1];
+    ip = &code[user_program.labels[i0]];
+    ops_table[ip[1]](&ip[1]);
+}
 
-            case BUTTON:
-                registers[O0] = button_pressed((int)registers[I0]);
-                continue;
-
-            case SLEEP:
-                SDL_Delay(registers[I0]);
-                continue;
-
-            case PIXEL:
-                {
-                    int x = registers[I0];
-                    int y = registers[I1];
-                    int c = registers[I2];
-                    if (x < 0 || y < 0) continue;
-                    if (x >= cpu_texture.w || y >= cpu_texture.h) continue;;
-
-                    cpu_texture.pixels[y * W + x] = c;
-                }
-                continue;
-
-            case HALT:
-                pc = code_length;
-                continue;
-
-            case RESTART:
-                pc = -1;
-                continue;
-
-            case LABEL:
-                pc++;
-                continue;
-
-            case CMP:
-                i0 = registers[I0];
-                i1 = registers[I1];
-                flags[EQ] = i0 == i1;
-                flags[LT] = i0 < i1;
-                flags[GT] = i0 > i1;
-                flags[ER] = 0;
-                continue;
-
-            case JMPEQ:
-                pc++;
-                i0 = code[pc];
-                if (flags[EQ]) {
-                    pc = user_program.labels[i0];
-                }
-                continue;
-
-            case JMPNE:
-                pc++;
-                i0 = code[pc];
-                if (!flags[EQ]) {
-                    pc = user_program.labels[i0];
-                }
-                continue;
-
-            case JMPGT:
-                pc++;
-                i0 = code[pc];
-                if (flags[GT]) {
-                    pc = user_program.labels[i0];
-                }
-                continue;
-
-            case JMPLT:
-                pc++;
-                i0 = code[pc];
-                if (flags[LT]) {
-                    pc = user_program.labels[i0];
-                }
-                continue;
-
-            case JMP:
-                pc++;
-                i0 = code[pc];
-                pc = user_program.labels[i0];
-                continue;
-            case CLS:
-                memset(cpu_texture.pixels, 0x333333, W * H * sizeof(Uint32));
-                continue;
-        }
+static void op_jmpeq(int *ip)
+{
+    if (flags[EQ]) {
+        int i0 = ip[1];
+        ip = &code[user_program.labels[i0]];
+        ops_table[ip[1]](&ip[1]);
+    } else {
+        ops_table[ip[2]](&ip[2]);
     }
 }
-    
+
+static void op_jmpne(int *ip)
+{
+    if (!flags[EQ]) {
+        int i0 = ip[1];
+        ip = &code[user_program.labels[i0]];
+        ops_table[ip[1]](&ip[1]);
+    } else {
+        ops_table[ip[2]](&ip[2]);
+    }
+}
+
+static void op_jmpgt(int *ip)
+{
+    if (flags[GT]) {
+        int i0 = ip[1];
+        ip = &code[user_program.labels[i0]];
+        ops_table[ip[1]](&ip[1]);
+    } else {
+        ops_table[ip[2]](&ip[2]);
+    }
+}
+
+static void op_jmplt(int *ip)
+{
+    if (flags[LT]) {
+        int i0 = ip[1];
+        ip = &code[user_program.labels[i0]];
+        ops_table[ip[1]](&ip[1]);
+    } else {
+        ops_table[ip[2]](&ip[2]);
+    }
+}
+
+static void op_cmp(int *ip)
+{
+    int i0 = registers[I0];
+    int i1 = registers[I1];
+    flags[EQ] = i0 == i1;
+    flags[LT] = i0 < i1;
+    flags[GT] = i0 > i1;
+    flags[ER] = 0;
+    ops_table[ip[1]](&ip[1]);
+}
+
+static void op_xor(int *ip)
+{
+    registers[O0] = registers[I0] ^ registers[I1];
+    ops_table[ip[1]](&ip[1]);
+}
+
+static void op_button(int *ip)
+{
+    registers[O0] = button_pressed((int)registers[I0]);
+    ops_table[ip[1]](&ip[1]);
+}
+
+static void op_cls(int *ip)
+{
+    memset(cpu_texture.pixels, 0x333333, W * H * sizeof(Uint32));
+    ops_table[ip[1]](&ip[1]);
+}
+
+
 int main(int argc, char *argv[])
 {
 
@@ -740,7 +816,8 @@ int main(int argc, char *argv[])
         parse_code(&user_program);
 
         regvm_init();
-        regvm_program_loop();
+        //regvm_program_loop();
+        ops_table[code[0]](code);
     }
 
     // Cleanup
