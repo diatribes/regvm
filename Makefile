@@ -1,7 +1,9 @@
+# NOTE: If building with debug the stack'll blow because tail call optimizations aren't on
+
 TARGET = regvm
 #TARGET = regvm.html
 LIBS = -lm `pkg-config --cflags --libs sdl2`
-CFLAGS= -o regvm -O3 -Wall -std=c99 -pedantic -I ./include `pkg-config --cflags --libs sdl2`
+CFLAGS= -o regvm -O3 -std=c99 -Wall -pedantic -I ./include `pkg-config --cflags --libs sdl2`
 #CFLAGS= -flto -O3 -o regvm.html -sUSE_SDL=2 -I ./include
 LDFLAGS =
 CC= gcc

@@ -23,7 +23,7 @@ LABEL 0
             MOVE I1, R1
             XOR
 
-            MOVE I0, O0 
+            MOVE I0, O0
             MOVE I1, T0
             MUL
             STORE I0, 0xff000000

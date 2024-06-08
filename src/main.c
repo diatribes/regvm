@@ -48,7 +48,7 @@ static void op_button(int *ip);
 static void op_cls(int *ip);
 
 typedef enum {
-    PROGRAM_LIMIT = 500,
+    PROGRAM_LIMIT = 10000,
 } limits_enum;
 
 typedef enum {
@@ -200,10 +200,6 @@ fn_op ops_table[] = {
     op_cls,
 };
 
-int code[PROGRAM_LIMIT];
-int code_length;
-#define CODE_AT_PC ((int)code[pc])
-
 typedef struct program {
     char *asmcode;
     size_t asmcode_len;
@@ -212,17 +208,18 @@ typedef struct program {
     int labels[10];
 } program;
 
-program user_program;
-
-int flags[FLAGS_COUNT];
-registers_enum registers[REGISTERS_COUNT];
-
 typedef struct software_texture
 {
     SDL_Surface *surface;
     int w, h;
     Uint32 *pixels;
 } software_texture;
+
+int code[PROGRAM_LIMIT];
+program user_program;
+
+int flags[FLAGS_COUNT];
+registers_enum registers[REGISTERS_COUNT];
 
 static software_texture cpu_texture;
 static SDL_Texture *gpu_texture;
@@ -501,7 +498,6 @@ void regvm_init()
     memset(registers, 0, sizeof(registers));
     memset(code, 0, sizeof(code));
 
-    code_length = user_program.bytecode_len;
     memcpy(&code, user_program.bytecode, user_program.bytecode_len * sizeof(int));
 }
 
@@ -579,7 +575,6 @@ static void op_puti(int *ip)
     ops_table[ip[1]](&ip[1]);
 }
 
-
 static void op_putc(int *ip)
 {
     printf("%c", (char)registers[I0]);
@@ -598,7 +593,6 @@ static void op_dec(int *ip)
     registers[ip[1]]--;
     ops_table[ip[2]](&ip[2]);
 }
-
 
 static void op_inceq(int *ip)
 {
@@ -765,7 +759,6 @@ static void op_cls(int *ip)
     memset(cpu_texture.pixels, 0x333333, W * H * sizeof(Uint32));
     ops_table[ip[1]](&ip[1]);
 }
-
 
 int main(int argc, char *argv[])
 {
